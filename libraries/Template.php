@@ -17,6 +17,9 @@ class Template
     private $ci;            /** @var CI_Controller $ci */
     private $_parser;       /** @var bool $_parser */
     private $_template;     /** @var string $_template */
+    public $meta;           /** @var Tag $meta */
+    public $stylesheet;     /** @var Tag $stylesheet */
+    public $javascript;     /** @var Tag $javascript */
     public $content;        /** @var Content $content */
 
     use View;
@@ -29,10 +32,13 @@ class Template
      */
     public function __construct($config = array())
     {
-        $this->ci        =& get_instance();
-        $this->_parser   = false;
-        $this->_template = null;
-        $this->content   = new Content();
+        $this->ci         =& get_instance();
+        $this->_parser    = false;
+        $this->_template  = null;
+        $this->meta       = new Tag('meta');
+        $this->stylesheet = new Tag('stylesheet');
+        $this->javascript = new Tag('javascript');
+        $this->content    = new Content();
 
         /** initialize configurations */
         if (!empty($config))
@@ -114,6 +120,154 @@ class Template
             ->set_output($out)
             ->_display();
         exit;
+    }
+}
+
+
+/**
+ * Tag Builder Helper
+ */
+class TagBuilder
+{
+    /**
+     * create meta tag
+     *
+     * @access public
+     * @param string $name
+     * @param string $content
+     * @param string $type
+     * @return string
+     */
+    public static function meta($name, $content = null, $type = 'name')
+    {
+        $name    = "{$type}=\"{$name}\"";
+        $content = !empty($content)?" content=\"{$content}\"" : null;
+
+        return "<meta {$name}{$content}>";
+    }
+
+    /**
+     * create link stylesheet tag
+     *
+     * @access public
+     * @param string $href
+     * @param string $media
+     * @param bool $index_page
+     * @return string
+     */
+    public static function stylesheet($href, $media = '', $index_page = FALSE)
+    {
+        $CI =& get_instance();
+        $link = '<link rel="stylesheet" ';
+
+        if (preg_match('#^([a-z]+:)?//#i', $href))
+            $link .= 'href="'.$href.'" ';
+        elseif ($index_page === TRUE)
+            $link .= 'href="'.$CI->config->site_url($href).'" ';
+        else
+            $link .= 'href="'.$CI->config->slash_item('base_url').$href.'" ';
+        if ($media !== '')
+            $link .= 'media="'.$media.'" ';
+
+        return $link."/>\n";
+    }
+
+    /**
+     * create javascript tag
+     *
+     * @access public
+     * @param string $url
+     * @param bool $index_page
+     * @return string
+     */
+    public static function javascript($url, $index_page = false)
+    {
+        $CI =& get_instance();
+        $src = null;
+
+        if (preg_match('#^([a-z]+:)?//#i', $url))
+            $src .= 'src="'.$url.'" ';
+        elseif ($index_page === TRUE)
+            $src .= 'src="'.$CI->config->site_url($url).'" ';
+        else
+            $src .= 'src="'.$CI->config->slash_item('base_url').$url.'" ';
+
+        return "<script {$src}></script> \n";
+    }
+}
+
+/**
+ * Tag
+ */
+class Tag
+{
+    private $type;  /** @var string $type */
+    private $tags;  /** @var array $tags */
+
+    /**
+     * tag constructor.
+     *
+     * @access public
+     * @param string $name
+     */
+    public function __construct($name)
+    {
+        $this->type = (string) $name;
+        $this->tags = array();
+    }
+
+    /**
+     * add new tag to build
+     *
+     * @access public
+     * @param mixed $args
+     * @return Tag $this
+     */
+    public function add(...$args)
+    {
+        $tag = $this->build($args);
+        array_push($this->tags, $tag);
+
+        return $this;
+    }
+
+    /**
+     * add new tag first to build
+     *
+     * @access public
+     * @param mixed $args
+     * @return Tag $this
+     */
+    public function add_first(...$args)
+    {
+        $tag = $this->build($args);
+        array_unshift($this->tags, $tag);
+
+        return $this;
+    }
+
+    /**
+     * build tag
+     *
+     * @access public
+     * @param string $attributes
+     * @return string
+     */
+    public function build($attributes)
+    {
+        $tag = "TagBuilder::{$this->type}";
+        return call_user_func_array($tag, $attributes);
+    }
+
+    /**
+     * tags output
+     *
+     * @access public
+     * @return string
+     */
+    public function __toString()
+    {
+        return implode('', $this->tags);
     }
 }
 
