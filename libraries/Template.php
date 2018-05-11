@@ -17,6 +17,7 @@ class Template
     private $ci;            /** @var CI_Controller $ci */
     private $_parser;       /** @var bool $_parser */
     private $_template;     /** @var string $_template */
+    public $title;          /** @var Title $title */
     public $meta;           /** @var Tag $meta */
     public $stylesheet;     /** @var Tag $stylesheet */
     public $javascript;     /** @var Tag $javascript */
@@ -35,6 +36,7 @@ class Template
         $this->ci         =& get_instance();
         $this->_parser    = false;
         $this->_template  = null;
+        $this->title      = new Title();
         $this->meta       = new Tag('meta');
         $this->stylesheet = new Tag('stylesheet');
         $this->javascript = new Tag('javascript');
@@ -129,6 +131,17 @@ class Template
  */
 class TagBuilder
 {
+    /**
+     * create title tag
+     *
+     * @param string $name
+     * @return string
+     */
+    public static function title($name)
+    {
+        return "<title> {$name} </title>";
+    }
+
     /**
      * create meta tag
      *
@@ -268,6 +281,144 @@ class Tag
     public function __toString()
     {
         return implode('', $this->tags);
+    }
+}
+
+/**
+ * Title
+ */
+class Title
+{
+    private $title;         /** @var string $title */
+    private $segment;       /** @var string $segment */
+    private $separator;     /** @var string $separator */
+    private $build;         /** @var bool $build */
+
+    /**
+     * title constructor.
+     */
+    public function __construct()
+    {
+        $this->title     = $this->get_current_title();
+        $this->segment   = null;
+        $this->separator = ' - ';
+        $this->build     = true;
+    }
+
+    /**
+     * set title page
+     *
+     * @param string $title
+     * @return Title $this
+     */
+    public function set($title)
+    {
+        $this->title = (string) $title;
+        $this->set_current_title($title);
+
+        return $this;
+    }
+
+    /**
+     * set segment title page
+     *
+     * @param string $title
+     * @return Title $this
+     */
+    public function set_segment($title)
+    {
+        $this->segment = (string) $title;
+
+        return $this;
+    }
+
+    /**
+     * set separator between segment and title
+     *
+     * @param $separator
+     * @return Title $this
+     */
+    public function set_separator($separator)
+    {
+        $this->separator = (string) $separator;
+
+        return $this;
+    }
+
+    /**
+     * set title tag automatic build
+     *
+     * @param bool $bool
+     * @return Title $this
+     */
+    public function set_build($bool)
+    {
+        $this->build = (bool) $bool;
+
+        return $this;
+    }
+
+    /**
+     * build title tag
+     *
+     * @return string
+     */
+    public function build()
+    {
+        $title = null;
+
+        if ($this->segment)
+            $title =  $this->title . $this->separator .  $this->segment;
+        else
+            $title = $this->title;
+
+        return TagBuilder::title($title);
+    }
+
+    /**
+     * get current title
+     *
+     * @return mixed
+     */
+    private function get_current_title()
+    {
+        if (!isset($_SESSION))
+            session_start();
+
+        return isset($_SESSION['title_current']) ? $_SESSION['title_current'] : null;
+    }
+
+    /**
+     * set current title
+     *
+     * @param string $title
+     */
+    private function set_current_title($title)
+    {
+        if (!isset($_SESSION))
+            session_start();
+        $_SESSION['title_current'] = $title;
+
+        return $this;
+    }
+
+    /**
+     * output title
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        if ($this->build)
+            return $this->build();
+
+        $out = null;
+        if ($this->segment)
+            $out = $this->segment . $this->separator . $this->title;
+        else
+            $out = $this->title;
+
+        return $out;
     }
 }
 
