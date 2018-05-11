@@ -123,6 +123,22 @@ class Template
             ->_display();
         exit;
     }
+
+    /**
+     * json rendering
+     *
+     * @param array $data
+     * @param int $code
+     */
+    public function render_json(array $data, $code = 200)
+    {
+        $this->ci->output
+                ->set_status_header($code)
+                ->set_content_type('application/json', 'utf-8')
+                ->set_output(json_encode($data))
+                ->_display();
+        exit;
+    }
 }
 
 
