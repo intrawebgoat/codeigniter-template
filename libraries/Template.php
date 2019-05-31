@@ -16,6 +16,7 @@ class Template
 {
     private $ci;            /** @var CI_Controller $ci */
     private $_parser;       /** @var bool $_parser */
+    private $_compress;     /** @var bool $_compress */
     private $_template;     /** @var string $_template */
     public $title;          /** @var Title $title */
     public $meta;           /** @var Tag $meta */
@@ -35,6 +36,7 @@ class Template
     {
         $this->ci         =& get_instance();
         $this->_parser    = false;
+        $this->_compress  = true;
         $this->_template  = null;
         $this->title      = new Title();
         $this->meta       = new Tag('meta');
@@ -83,6 +85,20 @@ class Template
     }
 
     /**
+     * set parser configuration
+     *
+     * @access public
+     * @param bool $bool
+     * @return Template $this
+     */
+    public function set_compress($bool)
+    {
+        $this->_compress = (bool) $bool;
+
+        return $this;
+    }
+
+    /**
      * set base template
      * @param string $view
      * @return Template $this
@@ -93,6 +109,38 @@ class Template
         $this->_template = (string) $view;
 
         return $this;
+    }
+
+    /**
+     *  compress output
+     *
+     * @param $buffer
+     * @return string
+     */
+    private function compress($buffer)
+    {
+        $search = array(
+            '/(\n|^)(\x20+|\t)/',
+            '/(\n|^)\/\/(.*?)(\n|$)/',
+            '/\n/',
+            '/\<\!--.*?-->/',
+            '/(\x20+|\t)/',   # Delete multispace (Without \n)
+            '/\>\s+\</',      # strip whitespaces between tags
+            '/(\"|\')\s+\>/', # strip whitespaces between quotation ("') and end tags
+            '/=\s+(\"|\')/'); # strip whitespaces between = "'
+
+        $replace = array(
+            "\n",
+            "\n",
+            " ",
+            "",
+            " ",
+            "><",
+            "$1>",
+            "=$1");
+
+        $buffer = preg_replace($search,$replace,$buffer);
+        return $buffer;
     }
 
     /**
@@ -118,9 +166,12 @@ class Template
         else
             $out = $this->content->build();
 
+        if($this->_compress)
+            $out = $this->compress($out);
+
         $this->ci->output
-            ->set_output($out)
-            ->_display();
+                 ->set_output($out)
+                 ->_display();
         exit;
     }
 
@@ -133,17 +184,17 @@ class Template
     public function render_json(array $data, $code = 200)
     {
         $this->ci->output
-                ->set_status_header($code)
-                ->set_content_type('application/json', 'utf-8')
-                ->set_output(json_encode($data))
-                ->_display();
+                 ->set_status_header($code)
+                 ->set_content_type('application/json', 'utf-8')
+                 ->set_output(json_encode($data))
+                 ->_display();
         exit;
     }
 }
 
 
 /**
- * Tag Builder Helper
+ * Builder helper of tag
  */
 class TagBuilder
 {
@@ -408,6 +459,7 @@ class Title
      * set current title
      *
      * @param string $title
+     * @return Title $this
      */
     private function set_current_title($title)
     {

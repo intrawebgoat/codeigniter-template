@@ -25,6 +25,12 @@ Example (config file):
 $config['parser'] = false;
 
 /**
+* if you want to compress the html output, set to TRUE
+* @type bool
+*/
+$config['compress'] = true;
+
+/**
 * template name.
 * @type string
 */  
@@ -60,6 +66,7 @@ class My_Controller extends CI_Controller
     {
         // code...
         $this->template->set_parser(true);
+        $this->template->set_compress(false);
         $this->template->set_template('templateName');
         // code...
     }
@@ -71,6 +78,7 @@ class My_Controller extends CI_Controller
         // code...
         $this->template
                         ->set_parser(false)
+                        ->set_compress(true)
                         ->set_template('templateName');
         // code...
     }
