@@ -23,6 +23,7 @@ class Template
     public $stylesheet;     /** @var Tag $stylesheet */
     public $javascript;     /** @var Tag $javascript */
     public $content;        /** @var Content $content */
+    public $data;           /** @var Data $data */
 
     use View;
 
@@ -43,6 +44,7 @@ class Template
         $this->stylesheet = new Tag('stylesheet');
         $this->javascript = new Tag('javascript');
         $this->content    = new Content();
+        $this->data       = new Data();
 
         /** initialize configurations */
         if (!empty($config))
@@ -166,6 +168,9 @@ class Template
         else
             $out = $this->content->build();
 
+        if($this->data->has_data())
+            $out = $this->data->inject($out);
+
         if($this->_compress)
             $out = $this->compress($out);
 
@@ -192,6 +197,118 @@ class Template
     }
 }
 
+/**
+ * JS Dataset Injector
+ *
+ * * Inject variables or json from the backend.
+ */
+class Data
+{
+    private $data;          /** @var array $data */
+    private $global_data;   /** @var array $global_data */
+
+    /**
+     * Data constructor
+     */
+    public function __construct()
+    {
+        $this->data = array();
+        $this->global_data = array();
+    }
+
+    /**
+     * Add data for injection
+     *
+     * @param $name
+     * @param $value
+     * @return $this
+     */
+    public function add($name,$value)
+    {
+        $this->data[$name] = $value;
+
+        return $this;
+    }
+
+    /**
+     * Add global scope data for injection
+     *
+     * @param $name
+     * @param $value
+     * @return $this
+     */
+    public function add_global($name,$value)
+    {
+        $this->global_data[$name] = $value;
+
+        return $this;
+    }
+
+    /**
+     * Inject datas in html
+     *
+     * @param $buffer
+     * @return mixed
+     */
+    public function inject($buffer)
+    {
+        $insert = $this->build();
+        $needle = stripos($buffer, '>', strrpos($buffer, '<link'));
+        $buffer = substr_replace($buffer, $insert, $needle+1, 0);
+
+        return $buffer;
+    }
+
+    /**
+     * Czech has a date for injecting
+     *
+     * @return bool
+     */
+    public function has_data()
+    {
+        return !empty($this->data) || !empty($this->global_data);
+    }
+
+    /**
+     * Build tags js with datas
+     *
+     * @return string
+     */
+    public function build()
+    {
+        $code = '';
+
+        if(!empty($this->data)) {
+            foreach ($this->data as $name => $value)
+                $code .= "var {$name} = {$this->parser($value)};";
+
+        }
+
+        if(!empty($this->global_data)) {
+            foreach ($this->global_data as $name => $value)
+                $code .= "window.{$name} = {$this->parser($value)};";
+        }
+
+        return "<script> {$code} </script>";
+    }
+
+    /**
+     * Parser data by type
+     *
+     * @param $value
+     * @return string
+     */
+    private function parser($value)
+    {
+        if(gettype($value) == 'array')
+            return json_encode($value);
+
+        if(gettype($value) == 'string')
+            return "'$value'";
+
+        return $value;
+    }
+}
 
 /**
  * Builder helper of tag

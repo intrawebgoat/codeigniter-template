@@ -188,7 +188,7 @@ there are some methods for sections manipulation:
 - **get($section)**     - get value of ` $section`
 - **get_all()**         - get value of all sections
 - **remove($section)**  - remove  ` $section`
-- **remove_all()**      - remove all sections
+- **remove_all()**      - remove all sections <br>
 Example:
 ```php
 $this->template->content
@@ -196,6 +196,15 @@ $this->template->content
                         ->section('sidebar')->after('header')
                         ->section('adsense')->before('content')
                         ->first('navbar-top');
+```
+
+#### JS Dataset Injector
+Inject variables or json from the backend in a simple and elegant way. <br>
+Example:
+```php
+$setting = ['theme' => 'dark', 'profile' => $user];
+$this->template->add('setting', $setting);
+$this->template->add_global('token', $token);   
 ```
 
 #### Renderization
